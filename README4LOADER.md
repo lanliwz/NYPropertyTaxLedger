@@ -63,6 +63,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Install the package from the repo checkout:
+
+```bash
+source venv/bin/activate
+python -m pip install .
+```
+
 ## Run Loader
 
 Load all PDFs recursively from a folder:
@@ -94,6 +101,17 @@ Example with the configured default folder:
 ```bash
 source venv/bin/activate
 python -m ny_property_tax_ledger.load_tax_pdfs \
+  --uri "$NEO4J_URI" \
+  --username "$NEO4J_USERNAME" \
+  --password "$NEO4J_PASSWORD" \
+  --database "${NEO4J_TAX_DB_NAME:-tax62n}"
+```
+
+Installed console-script form:
+
+```bash
+source venv/bin/activate
+nypropertytaxledger-load-pdfs \
   --uri "$NEO4J_URI" \
   --username "$NEO4J_USERNAME" \
   --password "$NEO4J_PASSWORD" \

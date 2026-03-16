@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 .streamlit/
 .idea/
+build/
+dist/
+*.egg-info/

@@ -79,6 +79,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Install as a package from the repo checkout:
+
+```bash
+source venv/bin/activate
+python -m pip install .
+```
+
 ## Run
 
 ```bash
@@ -135,6 +142,13 @@ You can verify the property ledger chain with:
 ```bash
 source venv/bin/activate
 python -m ny_property_tax_ledger.verify_property_ledger --database tax62n
+```
+
+After package installation, the same commands are also available as console scripts:
+
+```bash
+nypropertytaxledger-load-pdfs --database tax62n --password "$NEO4J_PASSWORD"
+nypropertytaxledger-verify-ledger --database tax62n
 ```
 
 ## Notes
