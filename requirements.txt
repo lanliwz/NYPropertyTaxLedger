@@ -1,0 +1,6 @@
+streamlit
+langchain-core
+langchain-openai
+langchain-neo4j
+langgraph
+pydantic
