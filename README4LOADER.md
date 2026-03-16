@@ -28,15 +28,17 @@ It was modernized from the archived workflow in:
 
 1. Read each PDF from the target folder.
 2. Extract table data from each page with `pdfplumber`.
-3. Send the extracted structure to the configured chat model.
-4. Ask the model to generate Cypher for:
+3. Infer the canonical tax year from the filename when it contains a year range like `2025-2026`.
+4. Send the extracted structure to the configured chat model.
+5. Ask the model to generate Cypher for:
    - `TaxStatement`
    - `Levy`
    - `Payment`
    - `Owner`
    - `Property`
-5. Split the generated Cypher into statements.
-6. Execute the statements against Neo4j database `tax62n`.
+6. Normalize and repair common Cypher issues before execution.
+7. Split schema statements from data statements.
+8. Execute each file in its own Neo4j transaction against database `tax62n`.
 
 ## Environment
 
@@ -97,6 +99,17 @@ python -m ny_property_tax_ledger.load_tax_pdfs \
   --database "${NEO4J_TAX_DB_NAME:-tax62n}"
 ```
 
+Current default-folder PDF set:
+
+```text
+62n-2019-2020-property-tax.pdf
+62n-2020-2021-property-tax.pdf
+62n-2022-2023-property-tax.pdf
+62n-2023-2024-property-tax.pdf
+62n-2024-2025-property-tax.pdf
+62n-2025-2026-property-tax.pdf
+```
+
 Top-level folder only:
 
 ```bash
@@ -118,9 +131,20 @@ The loader prints a summary dictionary like:
 
 If a file fails, the error is added to the `errors` list with the source filename.
 
+After the current year-normalization fix, a clean load into `testdb` or `tax62n` should produce `TaxStatement.year` values like:
+
+```text
+2019-2020
+2020-2021
+2022-2023
+2023-2024
+2024-2025
+2025-2026
+```
+
 ## Notes
 
-- The loader currently relies on LLM-generated Cypher, so results depend on the consistency of the PDF structure.
+- The loader still relies on LLM-generated Cypher, but it now adds deterministic year normalization, Cypher cleanup, retry/repair, and per-file transaction safety.
 - `--dry-run` is the safest first step for a new PDF batch.
 - The generated Cypher targets the archived tax-bill graph shape, not the newer `Account` / `TaxBilling` / `TaxPayment` split model.
 - If needed, the next improvement would be saving generated Cypher to disk before execution for review and replay.

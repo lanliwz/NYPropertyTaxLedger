@@ -13,6 +13,7 @@ It was initialized from the archived `tax62_chatbot` prototype and cleaned up in
 - Neo4j-backed tax billing and payment analysis
 - Simple CLI conversation runner for quick testing
 - PDF-to-Cypher loader for archived-style tax bill PDFs
+- Filename-based tax-year normalization for loader imports
 
 ## Project Layout
 
@@ -111,9 +112,11 @@ If you omit the folder argument, the loader uses `TAX_FILE_FOLDER`, which defaul
 
 The loader flow is:
 - Extract tables from each PDF with `pdfplumber`
+- Infer the canonical tax year from the PDF filename when a year range like `2025-2026` is present
 - Send the extracted structure to the configured chat model
 - Generate Cypher for `TaxStatement`, `Levy`, `Payment`, `Owner`, and `Property`
-- Execute the generated Cypher against Neo4j `tax62n`
+- Repair common Cypher issues automatically when Neo4j rejects a generated script
+- Execute schema and data statements separately, then write each file in its own transaction against Neo4j `tax62n`
 
 ## Notes
 
@@ -121,3 +124,5 @@ The loader flow is:
 - The default Neo4j database is `tax62n`, unless `NEO4J_TAX_DB_NAME` is overridden.
 - The sample Cypher few-shots target the split property tax model with `Account`, `TaxBilling`, and `TaxPayment`.
 - The PDF loader was modernized from the archived `taxbill_loader62n.py` and `pdf2graph.py` workflow.
+- The default tax PDF folder currently contains files named like `62n-2019-2020-property-tax.pdf` through `62n-2025-2026-property-tax.pdf`.
+- The loader normalizes `TaxStatement.year` from the filename, so `62n-2025-2026-property-tax.pdf` is stored as `2025-2026`.

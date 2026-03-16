@@ -26,6 +26,24 @@ def _extract_message_text(response) -> str:
     return str(content).strip()
 
 
+def infer_tax_year_from_filename(file_path: str | Path) -> str | None:
+    match = re.search(r"(\d{4})-(\d{4})", Path(file_path).name)
+    if not match:
+        return None
+    return f"{match.group(1)}-{match.group(2)}"
+
+
+def apply_tax_year_override(cypher_script: str, tax_year: str | None) -> str:
+    if not tax_year:
+        return cypher_script
+    return re.sub(
+        r"(\byear:\s*)(\"[^\"]*\"|\d{4})",
+        lambda m: f'{m.group(1)}"{tax_year}"',
+        cypher_script,
+        count=1,
+    )
+
+
 def normalize_cypher_script(cypher_script: str) -> str:
     """Apply small deterministic repairs to common model output issues."""
     cleaned = cypher_script.replace("```cypher", "").replace("```", "").strip()
@@ -125,6 +143,7 @@ def _build_generation_prompt(payload: str) -> str:
         - If there are multiple payments, UNWIND them from data.payments.
         - If there is one payment, either store it in data.payment or a one-item data.payments list.
         - Ensure all variables referenced in SET, MERGE, WITH, and UNWIND are defined.
+        - If the source filename contains a tax year range like 2025-2026, use that exact range for data.year.
 
         PDF content:
         {payload}
@@ -169,10 +188,12 @@ def generate_cypher_for_tax_bill(
     """Generate Cypher statements for a property tax PDF using the configured chat model."""
     pdf_data = extract_pdf_tables(file_path)
     payload = json.dumps(pdf_data, ensure_ascii=True)
+    tax_year = infer_tax_year_from_filename(file_path)
 
     active_model = model or llm
     response = active_model.invoke(_build_generation_prompt(payload))
-    return normalize_cypher_script(_extract_message_text(response))
+    cypher = normalize_cypher_script(_extract_message_text(response))
+    return apply_tax_year_override(cypher, tax_year)
 
 
 def repair_cypher_for_tax_bill(
@@ -184,6 +205,8 @@ def repair_cypher_for_tax_bill(
     """Repair invalid Cypher using the source PDF content plus Neo4j error feedback."""
     pdf_data = extract_pdf_tables(file_path)
     payload = json.dumps(pdf_data, ensure_ascii=True)
+    tax_year = infer_tax_year_from_filename(file_path)
     active_model = model or llm
     response = active_model.invoke(_build_repair_prompt(payload, bad_cypher, error_message))
-    return normalize_cypher_script(_extract_message_text(response))
+    cypher = normalize_cypher_script(_extract_message_text(response))
+    return apply_tax_year_override(cypher, tax_year)
