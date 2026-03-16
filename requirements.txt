@@ -4,3 +4,4 @@ langchain-openai==1.1.11
 langchain-neo4j==0.8.0
 langgraph==1.1.2
 pydantic
+pdfplumber
