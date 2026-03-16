@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">NYPropertyTaxLedger data flow frontpage</title>
+  <desc id="desc">Architecture overview showing Streamlit, LangGraph, LangChain, and Neo4j data flow for NYPropertyTaxLedger.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5f1e8"/>
+      <stop offset="100%" stop-color="#d9e6f2"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#eef4f8"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="4.5" markerHeight="4.5" refX="4" refY="2.25" orient="auto">
+      <path d="M 0 0 L 4.5 2.25 L 0 4.5 z" fill="#174a7c"/>
+    </marker>
+    <style>
+      .title { font: 700 42px Georgia, 'Times New Roman', serif; fill: #16324f; }
+      .subtitle { font: 400 20px Georgia, 'Times New Roman', serif; fill: #35516c; }
+      .label { font: 700 22px Arial, sans-serif; fill: #183247; }
+      .body { font: 400 16px Arial, sans-serif; fill: #35516c; }
+      .small { font: 400 14px Arial, sans-serif; fill: #49657f; }
+      .arrow { stroke: #174a7c; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .panel { fill: url(#panel); stroke: #8aa7c0; stroke-width: 2; rx: 22; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="520" fill="url(#bg)"/>
+  <rect x="28" y="28" width="1144" height="464" rx="28" fill="#ffffff" opacity="0.68"/>
+
+  <text x="70" y="92" class="title">NYPropertyTaxLedger</text>
+  <text x="70" y="126" class="subtitle">Property tax billing and payment analysis with Streamlit, LangGraph, LangChain, and Neo4j</text>
+
+  <rect x="70" y="190" width="190" height="120" class="panel"/>
+  <text x="110" y="235" class="label">User</text>
+  <text x="95" y="264" class="body">Ask billing, payment,</text>
+  <text x="99" y="287" class="body">balance, and history</text>
+
+  <rect x="320" y="170" width="210" height="160" class="panel"/>
+  <text x="367" y="217" class="label">Streamlit UI</text>
+  <text x="386" y="244" class="small">app.py</text>
+  <text x="348" y="274" class="body">Chat interface, session</text>
+  <text x="355" y="297" class="body">state, and Cypher display</text>
+
+  <rect x="590" y="135" width="270" height="230" class="panel"/>
+  <text x="645" y="183" class="label">LangGraph Workflow</text>
+  <text x="628" y="212" class="small">guard -> cypher -> query -> answer</text>
+  <text x="627" y="248" class="body">Routes messages through</text>
+  <text x="619" y="271" class="body">decision, query generation,</text>
+  <text x="629" y="294" class="body">execution, and synthesis</text>
+
+  <rect x="920" y="90" width="210" height="120" class="panel"/>
+  <text x="960" y="136" class="label">LangChain</text>
+  <text x="957" y="163" class="small">init_chat_model(...)</text>
+  <text x="949" y="191" class="body">LLM reasoning and</text>
+  <text x="972" y="214" class="body">structured output</text>
+
+  <rect x="920" y="255" width="210" height="120" class="panel"/>
+  <text x="976" y="301" class="label">Neo4j</text>
+  <text x="966" y="328" class="small">database: tax62n</text>
+  <text x="950" y="356" class="body">Account, TaxBilling,</text>
+  <text x="958" y="379" class="body">and TaxPayment data</text>
+
+  <rect x="590" y="395" width="270" height="70" class="panel"/>
+  <text x="631" y="436" class="body">Few-shot Cypher examples guide query generation</text>
+
+  <path d="M 260 250 L 320 250" class="arrow"/>
+  <path d="M 530 250 L 590 250" class="arrow"/>
+  <path d="M 860 190 L 920 150" class="arrow"/>
+  <path d="M 860 300 L 920 315" class="arrow"/>
+  <path d="M 725 365 L 725 395" class="arrow"/>
+  <path d="M 920 150 C 880 150, 885 140, 860 150" class="arrow"/>
+  <path d="M 920 315 C 875 315, 885 330, 860 320" class="arrow"/>
+</svg>

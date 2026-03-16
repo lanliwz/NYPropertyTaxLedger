@@ -42,7 +42,7 @@ async def guard_node(state: TaxChatState):
         ]
     )
 
-    chain = prompt | llm.with_structured_output(GuardDecision)
+    chain = prompt | llm.with_structured_output(GuardDecision, method="json_schema")
     result = await chain.ainvoke({"messages": state["messages"]})
 
     if result.decision == "end":
