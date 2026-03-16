@@ -39,6 +39,7 @@ It was modernized from the archived workflow in:
 6. Normalize and repair common Cypher issues before execution.
 7. Split schema statements from data statements.
 8. Execute each file in its own Neo4j transaction against database `tax62n`.
+9. Append one `LedgerBlock` and multiple `LedgerEntry` nodes as immutable blockchain-style history for the imported property/tax-year snapshot.
 
 ## Environment
 
@@ -142,9 +143,17 @@ After the current year-normalization fix, a clean load into `testdb` or `tax62n`
 2025-2026
 ```
 
+The same clean load now also appends blockchain-style history:
+
+- `LedgerBlock` nodes linked to the property with `LEDGER_FOR`
+- `LedgerEntry` nodes linked to the block with `CONTAINS`
+- `PREVIOUS_BLOCK` links between consecutive import blocks
+- `FOR_PROPERTY` and `FOR_TAX_STATEMENT` links from entries to the projection graph
+
 ## Notes
 
-- The loader still relies on LLM-generated Cypher, but it now adds deterministic year normalization, Cypher cleanup, retry/repair, and per-file transaction safety.
+- The loader still relies on LLM-generated Cypher, but it now adds deterministic year normalization, Cypher cleanup, retry/repair, per-file transaction safety, and append-only ledger history.
 - `--dry-run` is the safest first step for a new PDF batch.
 - The generated Cypher targets the archived tax-bill graph shape, not the newer `Account` / `TaxBilling` / `TaxPayment` split model.
+- The append-only ledger is the system of record; `TaxStatement`, `Levy`, and `Payment` are the compatibility projection.
 - If needed, the next improvement would be saving generated Cypher to disk before execution for review and replay.

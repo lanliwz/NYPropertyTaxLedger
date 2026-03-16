@@ -14,6 +14,7 @@ It was initialized from the archived `tax62_chatbot` prototype and cleaned up in
 - Simple CLI conversation runner for quick testing
 - PDF-to-Cypher loader for archived-style tax bill PDFs
 - Filename-based tax-year normalization for loader imports
+- Blockchain-style append-only `LedgerBlock` and `LedgerEntry` history
 
 ## Project Layout
 
@@ -55,6 +56,7 @@ Flow summary:
 - LangGraph checks whether the request is in scope, generates Cypher, executes it through Neo4j, and drafts a final answer.
 - LangChain provides the chat model used for guard decisions, Cypher generation, and response synthesis.
 - Neo4j returns billing and payment records from the `tax62n` database.
+- The loader appends immutable `LedgerBlock` and `LedgerEntry` history while keeping `TaxStatement`, `Levy`, and `Payment` as projections.
 
 ## Environment
 
@@ -116,7 +118,24 @@ The loader flow is:
 - Send the extracted structure to the configured chat model
 - Generate Cypher for `TaxStatement`, `Levy`, `Payment`, `Owner`, and `Property`
 - Repair common Cypher issues automatically when Neo4j rejects a generated script
-- Execute schema and data statements separately, then write each file in its own transaction against Neo4j `tax62n`
+- Execute schema and projection statements separately, then write each file in its own transaction against Neo4j `tax62n`
+- Append one immutable `LedgerBlock` per file import and `LedgerEntry` rows for levy and payment events
+
+## Blockchain Ledger
+
+`NYPropertyTaxLedger` now follows the same blockchain-style design direction as `JCTaxLedger`:
+
+- `LedgerBlock` is the append-only system of record
+- `LedgerEntry` stores immutable levy and payment events for each import block
+- `PREVIOUS_BLOCK` links make the chain tamper-evident
+- `TaxStatement`, `Levy`, and `Payment` remain as query-friendly projections
+
+You can verify the property ledger chain with:
+
+```bash
+source venv/bin/activate
+python -m ny_property_tax_ledger.verify_property_ledger --database tax62n
+```
 
 ## Notes
 
@@ -126,3 +145,4 @@ The loader flow is:
 - The PDF loader was modernized from the archived `taxbill_loader62n.py` and `pdf2graph.py` workflow.
 - The default tax PDF folder currently contains files named like `62n-2019-2020-property-tax.pdf` through `62n-2025-2026-property-tax.pdf`.
 - The loader normalizes `TaxStatement.year` from the filename, so `62n-2025-2026-property-tax.pdf` is stored as `2025-2026`.
+- The append-only property ledger is the system of record; the tax statement graph remains the compatibility projection.
