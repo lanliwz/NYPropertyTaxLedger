@@ -11,7 +11,7 @@ from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
 
 from ny_property_tax_ledger.config import TAX_FILE_FOLDER
-from ny_property_tax_ledger.pdf_extract import extract_pdf_tables
+from ny_property_tax_ledger.pdf_extract import extract_pdf_tables, extract_property_metadata
 from ny_property_tax_ledger.property_ledger import (
     build_property_ledger_block,
     build_property_ledger_entries,
@@ -134,6 +134,19 @@ def _append_property_ledger(tx, property_address, tax_year, ledger_block, ledger
         )
 
 
+def _upsert_property_metadata(tx, property_metadata: dict[str, str]) -> None:
+    tx.run(
+        """
+        MERGE (p:Property {address: $address})
+        SET p.sctm = $sctm,
+            p.itemNumber = $itemNumber
+        """,
+        address=property_metadata["address"],
+        sctm=property_metadata.get("sctm"),
+        itemNumber=property_metadata.get("itemNumber"),
+    ).consume()
+
+
 def _partition_statements(statements: list[str]) -> tuple[list[str], list[str]]:
     schema_statements: list[str] = []
     data_statements: list[str] = []
@@ -143,6 +156,41 @@ def _partition_statements(statements: list[str]) -> tuple[list[str], list[str]]:
         else:
             data_statements.append(statement)
     return schema_statements, data_statements
+
+
+def _align_payment_constraints(session) -> None:
+    """Remove legacy payment-date uniqueness and ensure composite payment identity."""
+    constraint_rows = session.run(
+        """
+        SHOW CONSTRAINTS
+        YIELD name, type, entityType, labelsOrTypes, properties
+        RETURN name, type, entityType, labelsOrTypes, properties
+        """
+    )
+    for record in constraint_rows:
+        if (
+            record["type"] == "UNIQUENESS"
+            and record["entityType"] == "NODE"
+            and record["labelsOrTypes"] == ["Payment"]
+            and record["properties"] in (["payment_date"], ["payment_date", "payor"])
+        ):
+            session.run(f"DROP CONSTRAINT {record['name']} IF EXISTS").consume()
+
+    session.run(
+        """
+        MATCH (p:Payment)
+        SET p.amount = coalesce(p.amount, p.amount_paid),
+            p.amount_paid = coalesce(p.amount_paid, p.amount)
+        """
+    ).consume()
+
+    session.run(
+        """
+        CREATE CONSTRAINT IF NOT EXISTS
+        FOR (p:Payment)
+        REQUIRE (p.payment_date, p.payor, p.amount) IS UNIQUE
+        """
+    ).consume()
 
 
 def _load_projection_snapshot(tx, property_address: str, tax_year: str) -> dict:
@@ -191,6 +239,7 @@ def _load_single_file(session, file_path: Path, run_id: str, max_attempts: int =
     cypher_script = generate_cypher_for_tax_bill(file_path)
     property_address, tax_year = _extract_projection_hints(file_path, cypher_script)
     pdf_data = extract_pdf_tables(file_path)
+    property_metadata = extract_property_metadata(file_path)
     source_payload_hash = build_source_payload_hash(pdf_data)
     loaded_at = datetime.utcnow().isoformat(timespec="seconds")
     last_error = ""
@@ -202,6 +251,8 @@ def _load_single_file(session, file_path: Path, run_id: str, max_attempts: int =
             for statement in schema_statements:
                 session.run(statement).consume()
             session.execute_write(_execute_statements_in_transaction, data_statements)
+            if property_metadata.get("address"):
+                session.execute_write(_upsert_property_metadata, property_metadata)
             snapshot = session.execute_read(_load_projection_snapshot, property_address, tax_year)
             block_seed = build_property_ledger_block(
                 property_address=property_address,
@@ -279,6 +330,7 @@ def load_tax_pdfs(
     driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
     try:
         with driver.session(database=database) as session:
+            _align_payment_constraints(session)
             for file_path in files:
                 try:
                     summary["statements"] += _load_single_file(session, file_path, run_id=run_id)

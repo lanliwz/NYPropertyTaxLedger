@@ -124,6 +124,7 @@ The loader flow is:
 - Infer the canonical tax year from the PDF filename when a year range like `2025-2026` is present
 - Send the extracted structure to the configured chat model
 - Generate Cypher for `TaxStatement`, `Levy`, `Payment`, `Owner`, and `Property`
+- Persist `Property.sctm` and `Property.itemNumber` from the source PDF text
 - Repair common Cypher issues automatically when Neo4j rejects a generated script
 - Execute schema and projection statements separately, then write each file in its own transaction against Neo4j `tax62n`
 - Append one immutable `LedgerBlock` per file import and `LedgerEntry` rows for levy and payment events

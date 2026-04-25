@@ -76,6 +76,10 @@ def normalize_cypher_script(cypher_script: str) -> str:
             normalized.append("")
             continue
 
+        if stripped == "WITH data, owner, property, taxStatement":
+            normalized.append("WITH data, property, taxStatement")
+            continue
+
         if stripped == "MERGE (owner)-[:OWNS]->(property)":
             if saw_unwind:
                 ownership_lines.append(line)
@@ -108,7 +112,22 @@ def normalize_cypher_script(cypher_script: str) -> str:
             normalized.insert(insert_at, ownership_line)
             insert_at += 1
 
-    return "\n".join(normalized).strip()
+    normalized_script = "\n".join(normalized).strip()
+    normalized_script = normalized_script.replace(
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Payment) REQUIRE n.payment_date IS UNIQUE;",
+        (
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Payment) "
+            "REQUIRE (n.payment_date, n.payor, n.amount) IS UNIQUE;"
+        ),
+    )
+    normalized_script = normalized_script.replace(
+        "MERGE (payment:Payment {payment_date: payment_data.payment_date, amount: payment_data.amount, payor: payment_data.payor})",
+        (
+            "MERGE (payment:Payment {payment_date: payment_data.payment_date, "
+            "payor: payment_data.payor, amount: payment_data.amount})"
+        ),
+    )
+    return normalized_script
 
 
 def _build_generation_prompt(payload: str) -> str:
@@ -121,7 +140,7 @@ def _build_generation_prompt(payload: str) -> str:
         (:Levy {{uuid, description, tax_amount_with_exemptions, tax_amount_without_exemptions}})
         (:Payment {{payment_date, amount, amount_paid, payor}})
         (:Owner {{name}})
-        (:Property {{address}})
+        (:Property {{address, sctm, itemNumber}})
         (:TaxStatement)-[:INCLUDES]->(:Levy)
         (:TaxStatement)-[:HAS_PAYMENT]->(:Payment)
         (:Property)-[:HAS_TAX_STATEMENT]->(:TaxStatement)
@@ -142,8 +161,10 @@ def _build_generation_prompt(payload: str) -> str:
         - Keep owner, property, and taxStatement in scope before any later WITH that needs them.
         - If there are multiple payments, UNWIND them from data.payments.
         - If there is one payment, either store it in data.payment or a one-item data.payments list.
+        - Payment identity must be composite. Use `(payment_date, payor, amount)` for uniqueness and MERGE keys, never `payment_date` alone.
         - Ensure all variables referenced in SET, MERGE, WITH, and UNWIND are defined.
         - If the source filename contains a tax year range like 2025-2026, use that exact range for data.year.
+        - If the PDF includes SCTM or item number, store them on Property as data.sctm and data.itemNumber.
 
         PDF content:
         {payload}
@@ -167,9 +188,10 @@ def _build_repair_prompt(payload: str, bad_cypher: str, error_message: str) -> s
           (:Levy {{uuid, description, tax_amount_with_exemptions, tax_amount_without_exemptions}})
           (:Payment {{payment_date, amount, amount_paid, payor}})
           (:Owner {{name}})
-          (:Property {{address}})
+          (:Property {{address, sctm, itemNumber}})
         - Every node pattern must include a label.
         - Never use variables in WITH unless they were defined earlier in scope.
+        - Payment identity must be composite. Use `(payment_date, payor, amount)` for uniqueness and MERGE keys, never `payment_date` alone.
         - Make the script executable as-is in Neo4j.
 
         Previous invalid Cypher:

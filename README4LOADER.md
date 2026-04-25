@@ -36,10 +36,11 @@ It was modernized from the archived workflow in:
    - `Payment`
    - `Owner`
    - `Property`
-6. Normalize and repair common Cypher issues before execution.
-7. Split schema statements from data statements.
-8. Execute each file in its own Neo4j transaction against database `tax62n`.
-9. Append one `LedgerBlock` and multiple `LedgerEntry` nodes as immutable blockchain-style history for the imported property/tax-year snapshot.
+6. Parse stable property metadata directly from the PDF text and persist `Property.sctm` and `Property.itemNumber`.
+7. Normalize and repair common Cypher issues before execution.
+8. Split schema statements from data statements.
+9. Execute each file in its own Neo4j transaction against database `tax62n`.
+10. Append one `LedgerBlock` and multiple `LedgerEntry` nodes as immutable blockchain-style history for the imported property/tax-year snapshot.
 
 ## Environment
 
